@@ -34,7 +34,8 @@ Authentication is completely stateless using **JWT (JSON Web Tokens)**.
 
 ### 💾 Database
 - MongoDB (Atlas or local)
-- Atomic operations using MongoDB transactions
+- - MongoDB Atlas for persistent storage
+- Automatic index creation for unique usernames
 - Unique index on usernames
 
 ---
@@ -48,6 +49,24 @@ Authentication is completely stateless using **JWT (JSON Web Tokens)**.
 - **JWT (jjwt 0.12.x)**
 - **Lombok**
 - **Maven**
+
+---
+
+## 🌐 CORS Configuration
+
+The backend uses a dynamic CORS setup to allow communication only between trusted frontend domains.
+
+CORS origins are configured using:
+app.allowed.origins=http://localhost:5500,http://127.0.0.1:5500,https://mydaily-journal-app.netlify.app
+
+This value is loaded at runtime (locally or via cloud environment variables) and applied in `SpringSecurity`:
+
+- Only whitelisted frontend domains are allowed
+- `Authorization` header is allowed for JWT
+- `allowCredentials(true)` is enabled for secure token handling
+- Supports preflight `OPTIONS` requests
+
+This ensures only your official deployed frontend can communicate with this backend.
 
 ---
 
@@ -73,12 +92,13 @@ src/
 
 ---
 
-## 🔑 Environment Variables (Stored in `application-secret.properties`)
+## 🔑 Environment Variables (Stored in `application-secret.properties` or set on the server)
 
 ```
 MONGO_URI=your-mongodb-connection-string
 MONGO_DB=journaldb
 JWT_SECRET=your-secret-key
+APP_ALLOWED_ORIGINS=http://localhost:5500,https://mydaily-journal-app.netlify.app
 ```
 
 `application.properties` loads these safely via:
@@ -87,6 +107,7 @@ JWT_SECRET=your-secret-key
 spring.data.mongodb.uri=${MONGO_URI}
 spring.data.mongodb.database=${MONGO_DB}
 jwt.secret=${JWT_SECRET}
+app.allowed.origins=${APP_ALLOWED_ORIGINS}
 ```
 
 ---
