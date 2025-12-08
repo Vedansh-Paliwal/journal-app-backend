@@ -2,6 +2,7 @@ package com.example.journalapp.config;
 
 import com.example.journalapp.filter.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -111,6 +112,7 @@ public class SpringSecurity {
     private JwtFilter jwtFilter;
 
     // PART 1 → Authorization (which endpoints need login)
+    // Our method below says give me whatever HttpSecurity.build() returns (a SecurityFilterChain) and register it as a bean.
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
          /*
@@ -120,6 +122,24 @@ public class SpringSecurity {
             - all other endpoints require login (authenticated)
             - use default spring login form (like old .formLogin())
         */
+        /*
+        When does Spring Security check .authenticated() or .hasRole()?
+            ✔ AFTER your JwtFilter
+            ✔ BEFORE your controller
+            ✔ INSIDE the AuthorizationFilter (Spring’s own filter)
+            In the filter chain, order looks like:
+            JwtFilter (your filter)
+            ↓
+            LogoutFilter
+            ↓
+            UsernamePasswordAuthenticationFilter
+            ↓
+            … many other internal filters …
+            ↓
+            AuthorizationFilter   <———— THIS ONE reads SecurityContext
+            ↓
+            Your Controller
+         */
         // Below is the authorization step, and it happens AFTER filters.
         return http
                 .authorizeHttpRequests(request -> request
@@ -136,6 +156,7 @@ public class SpringSecurity {
                 .csrf(AbstractHttpConfigurer::disable)
                 // Disable CSRF for simplicity (common for APIs)
                 .cors(Customizer.withDefaults())
+                // This tells Spring: “Use the CORS configuration bean if it exists.”
                 // It tells Spring Security: "I will provide a CORS configuration bean. Please use it."
                 // It does NOT set CORS rules
                 // It just activates CORS support.
@@ -223,15 +244,37 @@ public class SpringSecurity {
     2️⃣ CorsConfigurationSource
         This maps your rules to all your endpoints (“/**”).
         Spring Security reads this bean and applies CORS rules.
-    */
+
+        CORS is a BROWSER security feature, not a backend security feature.
+            Backend:
+            http://localhost:8080/user/profile
+            Frontend:
+            http://localhost:5500/dashboard
+            Frontend calls backend → browser checks:
+            “Is 5500 allowed to talk to 8080?”
+            If not allowed → CORS error.
+     */
+
+    /*
+        ✔ CORS is enforced only by browsers
+        ✔ CORS cares about ORIGINS (protocol + domain + port), not computers
+        ✔ Different ports = different origins = CORS
+     */
+
+    @Value("${app.allowed.origins:}")
+    private String allowedOrigins;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        // Create an empty CORS rule object, which will hold allowed origins,methods,headers,credentials.
         CorsConfiguration config = new CorsConfiguration();
 
         // 1️⃣ Which frontend origins are allowed to call the backend
         config.setAllowedOrigins(List.of(
                 "http://localhost:5500",
-                "http://127.0.0.1:5500"
+                "http://127.0.0.1:5500",
+                "http://127.0.0.1:5501",
+                "https://mydaily-journal-app.netlify.app"
         ));
 
         // 2️⃣ Which HTTP methods are allowed
@@ -243,11 +286,12 @@ public class SpringSecurity {
         // 4️⃣ Allow cookies / Authorization header (needed for JWT)
         config.setAllowCredentials(true);
 
-        // 5️⃣ Apply this configuration to ALL endpoints (/**)
+        // 5️⃣ “Apply the CORS rule book to every URL in the backend.”
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
 
-        return source; // Contains a mapping of URL pattern → CORS rule. We are returning it to Spring Security itself.
+        return source; // “Spring Security, here is the CORS configuration you should use.”
+        // Contains a mapping of URL pattern → CORS rule. We are returning it to Spring Security itself.
         // More precisely, Spring Security looks for CorsConfiguration bean, when it finds one, it uses it.
     }
 }

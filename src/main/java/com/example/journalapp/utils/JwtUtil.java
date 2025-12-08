@@ -31,10 +31,10 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parser()
+        return Jwts.parser() // Creates a parser object (similar to builder but for reading tokens). But this parser doesn't know your secret key yet.
                 .verifyWith(getSigningKey())
                 .build()
-                .parseSignedClaims(token)
+                .parseSignedClaims(token) // This method does 3 things: 1️⃣ Splits the token into header.payload.signature 2️⃣ Recomputes the signature using your secret key 3️⃣ Compares the recomputed signature with the token signature
                 .getPayload();
     }
 
@@ -56,7 +56,7 @@ public class JwtUtil {
 
     // Payload = “claims + subject + issuedAt + expiration”.
     public String createToken(Map<String, Object> claims, String subject) {
-        return Jwts.builder()
+        return Jwts.builder()   // A "builder" is just a normal object that helps you build another thing step-by-step, using a clean chain of methods.
                 .claims(claims) // Whatever is inside the claims map will be added to the payload of the token.
                 .subject(subject)
                 .header().empty().add("typ","JWT")
@@ -64,7 +64,7 @@ public class JwtUtil {
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
                 .signWith(getSigningKey()) // Signature = HMACSHA256(header + payload + SECRET_KEY)
-                .compact(); // Builds the JWT string like : eyJhbGciOi...xxx.yyy.zzz
+                .compact(); // FINALLY when you do this step, the library encodes header, payload, signs it, combines them and return a JWT string
     }
     // It’s instructions to the JWT library telling how to build it. The order of your method calls is irrelevant.
 

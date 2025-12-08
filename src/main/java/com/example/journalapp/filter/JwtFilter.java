@@ -97,7 +97,8 @@ Its ONLY job:
 👉 If valid → tell Spring Security “User is logged in”
  */
 @Component
-public class JwtFilter extends OncePerRequestFilter {
+public class JwtFilter extends OncePerRequestFilter { // OncePerRequestFilter ensures:
+//    This filter runs exactly once per request — not twice, not multiple times through forwards.
 
     @Autowired
     private UserDetailsService userDetailsService;
@@ -105,6 +106,9 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private JwtUtil jwtUtil;
 
+    // HttpServletRequest request : This represents the incoming HTTP request(contains everything we send in fetch() in JS).
+    // HttpServletResponse response : Represents the response that your server will send back.
+    // FilterChain : This represents the chain of filters Spring Security uses.
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String authorizationHeader = request.getHeader("Authorization");
@@ -116,8 +120,8 @@ public class JwtFilter extends OncePerRequestFilter {
         }
         if(username != null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username); // I know the username from token. Now let me load full user info from DB.
-            // WHY NOT JUST USE UserService.findByUsername() ? Because Spring Security does not work with your custom User class.
-            // Spring Security wants its users in a specific internal format, called: UserDetails. Your User class ≠ Spring Security’s UserDetails class.
+//            WHY NOT JUST USE UserService.findByUsername() ? Because Spring Security does not work with your custom User class.
+//            Spring Security wants its users in a specific internal format, called: UserDetails. Your User class ≠ Spring Security’s UserDetails class.
 //            WHY DOES SPRING SECURITY NEED UserDetails?
 //            Because Spring Security builds an internal object called:
 //            Authentication
@@ -140,12 +144,13 @@ public class JwtFilter extends OncePerRequestFilter {
                 // This line below creates an object that tells Spring Security: “This user is LOGGED IN and here are his roles.”
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities()
-                ); /*
-                        Create an authentication object using(User is not logging in now, he is already logged in):
-                            the user
-                            no password (that’s why null)
-                            the user’s roles
-                   */
+                );
+                /*
+                    Create an authentication object using(User is not logging in now, he is already logged in):
+                        the user
+                        no password (that’s why null)
+                        the user’s roles
+                */
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 /*
                 What information does this add?
@@ -161,8 +166,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 // This tells Spring:👉 This user is authenticated. This line tells Spring Security:
                 // “From this moment onward, this user is authenticated for this request.”
 //                After this line, ANYWHERE in your app:
-//                SecurityContextHolder.getContext().getAuthentication()
-//                will return:
+//                SecurityContextHolder.getContext().getAuthentication() will return:
 //                1. who the user is
 //                2. roles
 //                3. authenticated = true

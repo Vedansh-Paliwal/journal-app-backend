@@ -25,6 +25,7 @@ public class PublicController {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    // Line below does NOT inject the interface. It injects our implementation, but treats it as the interface type.
     @Autowired
     private UserDetailsService userDetailsService;
 
@@ -69,6 +70,11 @@ public class PublicController {
             Check password using BCrypt
             If correct → authentication SUCCESS, however this doesn't return a UserDetails object for Spring Security
             This is just a login request wrapper.
+            So your input becomes an authentication request object:
+                UsernamePasswordAuthenticationToken
+                    principal = "ved"
+                    credentials = "1234"
+                    authenticated = false
              */
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword())
@@ -89,9 +95,9 @@ public class PublicController {
             UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
             /*
             UserDetails is:
-            1. Not your class
-            2. Spring Security’s interface
-            3. It contains username, password, roles, isEnabled, etc.
+                1. Not your class
+                2. Spring Security’s interface
+                3. It contains username, password, roles, isEnabled, etc.
              */
             String jwt = jwtUtil.generateToken(userDetails.getUsername());
             return new ResponseEntity<>(jwt, HttpStatus.OK);
