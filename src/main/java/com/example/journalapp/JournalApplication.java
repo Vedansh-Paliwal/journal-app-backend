@@ -10,7 +10,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @SpringBootApplication
-@PropertySource("classpath:application-secret.properties")
 @EnableTransactionManagement // Springboot will create a transactional context(a container) corresponding to all the methods who
 // have @Transactional annotation, which will be having all the DB operations related to that method, and they will all be treated
 // like one operation, if any one of them fails, all will be rolled back(We are achieving ATOMICITY). All this work is handled
